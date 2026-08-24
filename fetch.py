@@ -273,10 +273,29 @@ def board_reed(cfg):
 # scoring - the whole point. Ranks by realistic chance of landing it.
 # ----------------------------------------------------------------------------
 
+def _has(word, text):
+    """Word-boundary match allowing normal plurals and -ship forms.
+
+    Plain substring matching is what let 'Internal Audit' through as an
+    internship: 'internal' contains 'intern'. So does 'international' and
+    'internet'. This matches intern/interns/internship/internships and
+    rejects internal.
+    """
+    return re.search(rf"\b{re.escape(word)}(?:s|es|ship|ships)?\b", text) is not None
+
+
+VAGUE_LOC = {"hybrid", "remote", "onsite", "on-site", "various", "flexible",
+             "multiple", "unspecified", "worldwide", "global", ""}
+
+# "5+ years of experience" is an instant no for an internship bot
+YEARS = re.compile(r"(\d+)\s*\+?\s*years?")
+
+
 def score_job(job, cfg):
     sc = cfg["scoring"]
     title = job["title"].lower()
-    blob = (title + " " + job["desc"] + " " + job["location"]).lower()
+    desc = job["desc"].lower()
+    blob = (title + " " + desc + " " + job["location"]).lower()
     points, why = 0, []
 
     # -- hard excludes -------------------------------------------------------
@@ -287,13 +306,31 @@ def score_job(job, cfg):
     # must be an early-careers role in the TITLE, not just mentioned in the
     # body text. Descriptions say "we welcome students" on senior roles all the
     # time - matching those would flood the inbox and kill trust in the alerts.
-    level_hit = next((k for k in sc["level_keywords"] if k in title), None)
+    level_hit = next((k for k in sc["level_keywords"] if _has(k, title)), None)
     if not level_hit:
         return None, []
 
-    # UK only
-    if any(re.search(rf"\b{re.escape(c)}\b", job["location"].lower())
-           for c in sc["exclude_locations"]):
+    # experience demand: no internship asks for 3+ years
+    for m in YEARS.finditer(blob):
+        ctx = blob[max(0, m.start() - 70):m.end() + 70]
+        if int(m.group(1)) >= 3 and "experience" in ctx:
+            return None, []
+
+    # -- location ------------------------------------------------------------
+    loc = job["location"].lower().strip()
+    foreign = sc["exclude_locations"]
+
+    if any(re.search(rf"\b{re.escape(c)}\b", loc) for c in foreign):
+        return None, []
+
+    # A location field of "Hybrid" or "Remote" tells us nothing, so fall back
+    # to the description. This is how a Bengaluru role reached the inbox.
+    if loc in VAGUE_LOC or len(loc) < 4:
+        if any(re.search(rf"\b{re.escape(c)}\b", desc) for c in foreign):
+            return None, []
+
+    # and require positive UK evidence somewhere rather than trusting silence
+    if not any(re.search(rf"\b{re.escape(u)}\b", blob) for u in sc["uk_signals"]):
         return None, []
 
     # -- role fit: no technical match at all means it is not for you ---------
@@ -318,7 +355,7 @@ def score_job(job, cfg):
     # -- level quality -------------------------------------------------------
     strong = ("placement", "industrial", "year in industry", "summer analyst",
               "internship", "summer intern")
-    points += 18 if any(k in title for k in strong) else 11
+    points += 18 if any(_has(k, title) for k in strong) else 11
     why.append(level_hit)
 
     # -- location ------------------------------------------------------------
