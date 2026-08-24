@@ -1,0 +1,630 @@
+{
+  "_note": "Tier A = realistically gettable for a 2nd-year with no prior internship. Tier B = large structured intakes, needs solid OA prep. Tier C = long shots, apply but do not bank on them. Run --discover once to fill in the ats/slug fields.",
+  "board_queries": [
+    "software engineer intern",
+    "software engineering placement",
+    "cloud devops intern",
+    "industrial placement technology",
+    "summer internship software",
+    "year in industry computer science",
+    "platform engineering intern"
+  ],
+  "companies": [
+    {
+      "name": "Depop",
+      "tier": "A",
+      "ats": "manual"
+    },
+    {
+      "name": "Made Tech",
+      "tier": "A",
+      "ats": "manual"
+    },
+    {
+      "name": "dxw",
+      "tier": "A",
+      "ats": "manual"
+    },
+    {
+      "name": "Scott Logic",
+      "tier": "A",
+      "ats": "lever",
+      "slug": "scottlogic"
+    },
+    {
+      "name": "BJSS",
+      "tier": "A",
+      "ats": "manual"
+    },
+    {
+      "name": "Equal Experts",
+      "tier": "A",
+      "ats": "greenhouse",
+      "slug": "equalexperts"
+    },
+    {
+      "name": "Softwire",
+      "tier": "A",
+      "ats": "manual"
+    },
+    {
+      "name": "Kainos",
+      "tier": "A",
+      "ats": "manual"
+    },
+    {
+      "name": "Version 1",
+      "tier": "A",
+      "ats": "smartrecruiters",
+      "slug": "version1"
+    },
+    {
+      "name": "Zuhlke",
+      "tier": "A",
+      "ats": "manual"
+    },
+    {
+      "name": "CACI",
+      "tier": "A",
+      "ats": "smartrecruiters",
+      "slug": "caci"
+    },
+    {
+      "name": "Transport for London",
+      "tier": "A",
+      "ats": "manual"
+    },
+    {
+      "name": "Network Rail",
+      "tier": "A",
+      "ats": "manual"
+    },
+    {
+      "name": "National Grid",
+      "tier": "A",
+      "ats": "manual"
+    },
+    {
+      "name": "Ordnance Survey",
+      "tier": "A",
+      "ats": "manual"
+    },
+    {
+      "name": "Met Office",
+      "tier": "A",
+      "ats": "manual"
+    },
+    {
+      "name": "NHS England",
+      "tier": "A",
+      "ats": "manual"
+    },
+    {
+      "name": "Softcat",
+      "tier": "A",
+      "ats": "manual"
+    },
+    {
+      "name": "Computacenter",
+      "tier": "A",
+      "ats": "manual"
+    },
+    {
+      "name": "Node4",
+      "tier": "A",
+      "ats": "manual"
+    },
+    {
+      "name": "Rackspace Technology",
+      "tier": "A",
+      "ats": "manual"
+    },
+    {
+      "name": "Six Degrees",
+      "tier": "A",
+      "ats": "manual"
+    },
+    {
+      "name": "Ancoris",
+      "tier": "A",
+      "ats": "greenhouse",
+      "slug": "ancoris"
+    },
+    {
+      "name": "Zego",
+      "tier": "A",
+      "ats": "ashby",
+      "slug": "zego"
+    },
+    {
+      "name": "Marshmallow",
+      "tier": "A",
+      "ats": "ashby",
+      "slug": "marshmallow"
+    },
+    {
+      "name": "Cleo",
+      "tier": "A",
+      "ats": "greenhouse",
+      "slug": "cleo"
+    },
+    {
+      "name": "GoCardless",
+      "tier": "A",
+      "ats": "greenhouse",
+      "slug": "gocardless"
+    },
+    {
+      "name": "Moonpig",
+      "tier": "A",
+      "ats": "lever",
+      "slug": "moonpig"
+    },
+    {
+      "name": "Trainline",
+      "tier": "A",
+      "ats": "ashby",
+      "slug": "trainline"
+    },
+    {
+      "name": "ComplyAdvantage",
+      "tier": "A",
+      "ats": "greenhouse",
+      "slug": "complyadvantage"
+    },
+    {
+      "name": "Onfido",
+      "tier": "A",
+      "ats": "manual"
+    },
+    {
+      "name": "Improbable",
+      "tier": "A",
+      "ats": "ashby",
+      "slug": "improbable"
+    },
+    {
+      "name": "Farfetch",
+      "tier": "A",
+      "ats": "lever",
+      "slug": "farfetch"
+    },
+    {
+      "name": "ASOS",
+      "tier": "A",
+      "ats": "smartrecruiters",
+      "slug": "asos"
+    },
+    {
+      "name": "Monzo",
+      "tier": "B",
+      "ats": "greenhouse",
+      "slug": "monzo"
+    },
+    {
+      "name": "Starling Bank",
+      "tier": "B",
+      "ats": "workable",
+      "slug": "starling-bank"
+    },
+    {
+      "name": "Wise",
+      "tier": "B",
+      "ats": "greenhouse",
+      "slug": "wise"
+    },
+    {
+      "name": "Checkout.com",
+      "tier": "B",
+      "ats": "manual"
+    },
+    {
+      "name": "Deliveroo",
+      "tier": "B",
+      "ats": "ashby",
+      "slug": "deliveroo"
+    },
+    {
+      "name": "Just Eat Takeaway",
+      "tier": "B",
+      "ats": "manual"
+    },
+    {
+      "name": "Skyscanner",
+      "tier": "B",
+      "ats": "greenhouse",
+      "slug": "skyscanner"
+    },
+    {
+      "name": "Snyk",
+      "tier": "B",
+      "ats": "manual"
+    },
+    {
+      "name": "Grafana Labs",
+      "tier": "B",
+      "ats": "greenhouse",
+      "slug": "grafanalabs"
+    },
+    {
+      "name": "Elastic",
+      "tier": "B",
+      "ats": "greenhouse",
+      "slug": "elastic"
+    },
+    {
+      "name": "Bloomberg",
+      "tier": "B",
+      "ats": "manual"
+    },
+    {
+      "name": "Ocado Technology",
+      "tier": "B",
+      "ats": "manual"
+    },
+    {
+      "name": "Sky",
+      "tier": "B",
+      "ats": "manual"
+    },
+    {
+      "name": "BT Group",
+      "tier": "B",
+      "ats": "manual"
+    },
+    {
+      "name": "Sainsburys",
+      "tier": "B",
+      "ats": "manual"
+    },
+    {
+      "name": "John Lewis Partnership",
+      "tier": "B",
+      "ats": "smartrecruiters",
+      "slug": "johnlewispartnership"
+    },
+    {
+      "name": "Vodafone",
+      "tier": "B",
+      "ats": "manual"
+    },
+    {
+      "name": "Arm",
+      "tier": "B",
+      "ats": "manual"
+    },
+    {
+      "name": "Dyson",
+      "tier": "B",
+      "ats": "manual"
+    },
+    {
+      "name": "BAE Systems Digital Intelligence",
+      "tier": "B",
+      "ats": "manual"
+    },
+    {
+      "name": "Leidos",
+      "tier": "B",
+      "ats": "manual"
+    },
+    {
+      "name": "CGI",
+      "tier": "B",
+      "ats": "manual"
+    },
+    {
+      "name": "Sopra Steria",
+      "tier": "B",
+      "ats": "manual"
+    },
+    {
+      "name": "Capgemini",
+      "tier": "B",
+      "ats": "manual"
+    },
+    {
+      "name": "Accenture",
+      "tier": "B",
+      "ats": "manual"
+    },
+    {
+      "name": "IBM",
+      "tier": "B",
+      "ats": "manual"
+    },
+    {
+      "name": "Expedia Group",
+      "tier": "B",
+      "ats": "manual"
+    },
+    {
+      "name": "Booking.com",
+      "tier": "B",
+      "ats": "manual"
+    },
+    {
+      "name": "Amazon",
+      "tier": "B",
+      "ats": "manual"
+    },
+    {
+      "name": "Cloudflare",
+      "tier": "B",
+      "ats": "greenhouse",
+      "slug": "cloudflare"
+    },
+    {
+      "name": "Google",
+      "tier": "C",
+      "ats": "manual"
+    },
+    {
+      "name": "Microsoft",
+      "tier": "C",
+      "ats": "manual"
+    },
+    {
+      "name": "Meta",
+      "tier": "C",
+      "ats": "manual"
+    },
+    {
+      "name": "Palantir Technologies",
+      "tier": "C",
+      "ats": "lever",
+      "slug": "palantir"
+    },
+    {
+      "name": "Stripe",
+      "tier": "C",
+      "ats": "greenhouse",
+      "slug": "stripe"
+    },
+    {
+      "name": "Databricks",
+      "tier": "C",
+      "ats": "greenhouse",
+      "slug": "databricks"
+    },
+    {
+      "name": "Revolut",
+      "tier": "C",
+      "ats": "manual"
+    },
+    {
+      "name": "BlackRock",
+      "tier": "C",
+      "ats": "manual"
+    },
+    {
+      "name": "Goldman Sachs",
+      "tier": "C",
+      "ats": "manual"
+    },
+    {
+      "name": "G-Research",
+      "tier": "C",
+      "ats": "manual"
+    }
+  ],
+  "scoring": {
+    "exclude_title": [
+      "senior",
+      "lead",
+      "principal",
+      "staff",
+      "director",
+      "manager",
+      "head",
+      "vp",
+      "chief",
+      "consultant",
+      "architect",
+      "specialist",
+      "contract",
+      "freelance"
+    ],
+    "level_keywords": [
+      "intern",
+      "internship",
+      "placement",
+      "industrial",
+      "summer analyst",
+      "year in industry",
+      "undergraduate",
+      "apprentice",
+      "early careers",
+      "trainee",
+      "insight",
+      "spring week",
+      "summer programme",
+      "summer program",
+      "work experience",
+      "student"
+    ],
+    "role_cloud": [
+      "cloud",
+      "devops",
+      "sre",
+      "site reliability",
+      "platform engineer",
+      "infrastructure",
+      "aws",
+      "azure",
+      "kubernetes",
+      "terraform",
+      "systems engineer",
+      "network engineer",
+      "solutions engineer"
+    ],
+    "role_software": [
+      "software",
+      "engineering",
+      "developer",
+      "backend",
+      "back end",
+      "full stack",
+      "fullstack",
+      "frontend",
+      "front end",
+      "web developer",
+      "computer science",
+      "programmer"
+    ],
+    "role_adjacent": [
+      "data",
+      "analyst",
+      "cyber",
+      "security",
+      "technology",
+      "digital",
+      "it ",
+      "qa",
+      "test",
+      "product"
+    ],
+    "exclude_locations": [
+      "united states",
+      "usa",
+      "new york",
+      "san francisco",
+      "seattle",
+      "austin",
+      "boston",
+      "chicago",
+      "canada",
+      "toronto",
+      "vancouver",
+      "germany",
+      "berlin",
+      "munich",
+      "france",
+      "paris",
+      "spain",
+      "madrid",
+      "barcelona",
+      "netherlands",
+      "amsterdam",
+      "ireland",
+      "dublin",
+      "poland",
+      "warsaw",
+      "krakow",
+      "portugal",
+      "lisbon",
+      "switzerland",
+      "zurich",
+      "sweden",
+      "stockholm",
+      "india",
+      "bangalore",
+      "hyderabad",
+      "singapore",
+      "australia",
+      "sydney",
+      "japan",
+      "tokyo",
+      "brazil",
+      "mexico",
+      "china",
+      "hong kong",
+      "israel",
+      "tel aviv",
+      "romania",
+      "bucharest",
+      "czech",
+      "prague",
+      "italy",
+      "milan",
+      "belgium"
+    ],
+    "modifiers": [
+      [
+        "penultimate",
+        10,
+        "penultimate year - that is you"
+      ],
+      [
+        "second year",
+        10,
+        "2nd years welcome"
+      ],
+      [
+        "no experience",
+        12,
+        "no experience needed"
+      ],
+      [
+        "aws",
+        10,
+        "AWS - matches your cert"
+      ],
+      [
+        "kubernetes",
+        7,
+        "Kubernetes"
+      ],
+      [
+        "terraform",
+        7,
+        "Terraform"
+      ],
+      [
+        "final year only",
+        -22,
+        "final-year only"
+      ],
+      [
+        "final-year students",
+        -18,
+        "final-year only"
+      ],
+      [
+        "phd",
+        -25,
+        "PhD level"
+      ],
+      [
+        "master's",
+        -16,
+        "Masters level"
+      ],
+      [
+        "msc",
+        -16,
+        "MSc level"
+      ],
+      [
+        "dv clearance",
+        -25,
+        "DV clearance needed"
+      ],
+      [
+        "security clearance",
+        -8,
+        "clearance needed"
+      ],
+      [
+        "unpaid",
+        -35,
+        "unpaid"
+      ],
+      [
+        "expenses only",
+        -35,
+        "unpaid"
+      ],
+      [
+        "graduating in 2026",
+        -25,
+        "wrong cohort"
+      ],
+      [
+        "2026 graduate",
+        -25,
+        "wrong cohort"
+      ]
+    ]
+  }
+}
