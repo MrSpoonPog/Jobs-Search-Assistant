@@ -749,6 +749,8 @@
       "vice president",
       "vp"
     ],
+    "_max_age_note": "Hard cutoff in days. Some employers leave 'evergreen' reqs open for years - Palantir had internships still listed from 2019 - and a scoring penalty alone was not enough to keep them out of a 'new roles' email. Postings with no date are kept, since a missing date is not evidence of staleness.",
+    "max_age_days": 120,
     "_exclude_discipline_note": "Non-technical disciplines, matched against the TITLE only. Without this a 'Marketing Placement' whose blurb mentions AWS scores as a technical role.",
     "exclude_discipline": [
       "marketing",

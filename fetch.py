@@ -420,6 +420,15 @@ def score_job(job, cfg):
         if int(m.group(1)) >= 3 and "experience" in ctx:
             return None, [f"wants {m.group(1)}+ years experience"]
 
+    # -- age: drop evergreen reqs --------------------------------------------
+    # Lever's createdAt is when the req first opened, and some employers never
+    # close them - Palantir was surfacing internships posted in 2019. A missing
+    # date is not evidence of staleness, so those are kept.
+    posted = parse_date(job.get("posted"))
+    max_age = sc.get("max_age_days")
+    if posted and max_age and (NOW - posted).days > max_age:
+        return None, [f"posted over {max_age} days ago"]
+
     # -- location: must be London ---------------------------------------------
     where, reason = location_verdict(job, cfg)
     if not where:
@@ -461,7 +470,6 @@ def score_job(job, cfg):
     why.append(where)
 
     # -- freshness: rolling deadlines mean speed wins -------------------------
-    posted = parse_date(job.get("posted"))
     if posted:
         age = (NOW - posted).days
         if age <= 3:

@@ -222,6 +222,12 @@ generic ("Summer Placement Programme") it falls back to the description, but
 only for a real engineering signal and only for 8 points, because that is
 weaker evidence.
 
+**`max_age_days`** — hard cutoff, default 120. Some employers leave "evergreen"
+requisitions open indefinitely; Palantir was surfacing internships first posted
+in 2019. A scoring penalty alone was not enough to keep a five-year-old listing
+out of a "new roles" email. Postings with no date at all are kept, since a
+missing date is not evidence of staleness. Raise it if you want a longer tail.
+
 **`modifiers`** — `["phrase", points, "label"]`. Boosts and penalties from the
 description. The total is clamped to between −40 and +20, so three buzzwords
 can never outweigh employer tier and role fit.
@@ -291,6 +297,7 @@ Then, depending on what got through:
 | A too-senior role got in | Add the word to `exclude_title` |
 | A non-London role got in | Add the city to `location.exclude_locations` |
 | Something scored too high | Lower the relevant `modifiers` weight |
+| An ancient posting got in | Lower `scoring.max_age_days` |
 | A whole employer is noise | Drop their tier to `"C"`, or delete them |
 
 Changes take effect on the next run. Nothing needs rebuilding.
