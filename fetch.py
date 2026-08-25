@@ -1,16 +1,20 @@
 #!/usr/bin/env python3
 """
-internbot - UK CS internship / placement aggregator.
+internbot - London CS internship / placement aggregator.
 
 No scraping. Pulls only from official JSON APIs and applicant tracking systems,
-scores every result by how likely you are to actually land it, and emails a
-ranked digest when something new appears.
+keeps only roles based in London (or the commuter belt), scores every result by
+how likely you are to actually land it, and emails a ranked digest when
+something new appears.
 
 Usage:
     python fetch.py --discover      # one-off: find + verify each company's ATS
     python fetch.py                 # normal run: alert on NEW jobs only
     python fetch.py --mode digest   # daily 8am: everything still open
     python fetch.py --dry-run       # print to terminal, send no email
+    python fetch.py --explain       # show why roles were rejected
+
+See USER_GUIDE.md for setup and tuning.
 """
 
 import argparse
@@ -21,9 +25,12 @@ import re
 import smtplib
 import sys
 import time
+import unicodedata
+from collections import Counter
 from datetime import datetime, timedelta, timezone
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from html import escape
 from pathlib import Path
 
 import requests
@@ -43,14 +50,16 @@ NOW = datetime.now(timezone.utc)
 # ----------------------------------------------------------------------------
 
 def load_json(path, default):
+    # encoding is explicit because config.json contains '£' and Windows would
+    # otherwise open it as cp1252 and blow up.
     if path.exists():
-        with open(path) as f:
+        with open(path, encoding="utf-8") as f:
             return json.load(f)
     return default
 
 
 def save_json(path, data):
-    with open(path, "w") as f:
+    with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
 
@@ -99,6 +108,29 @@ def clean(html):
                 .replace("&lt;", "<").replace("&gt;", ">")
                 .replace("&#39;", "'").replace("&quot;", '"'))
     return re.sub(r"\s+", " ", text).strip()
+
+
+def norm(text):
+    """Lowercase and fold accents so the plain-ASCII keyword lists actually hit.
+
+    Without this, 'Krakow' in exclude_locations never matches a posting that
+    says 'Krakow' with the accent, and a Polish role reaches the inbox. Same
+    for Zurich, Munchen, Malmo and friends.
+    """
+    # 'u.k.' is folded to 'uk' so the signal list needs only one spelling.
+    # 'u.s.' is deliberately NOT folded - bare 'us' would match "join us".
+    text = str(text or "").lower().replace("u.k.", "uk")
+    text = unicodedata.normalize("NFKD", text)
+    return re.sub(r"\s+", " ", "".join(c for c in text if not unicodedata.combining(c)))
+
+
+def word_hit(needles, haystack):
+    """First needle present in haystack as a whole word, else None."""
+    for n in needles:
+        n = norm(n).strip()
+        if n and re.search(rf"(?<!\w){re.escape(n)}(?!\w)", haystack):
+            return n
+    return None
 
 
 def job_key(job):
@@ -227,11 +259,13 @@ def board_adzuna(cfg):
     app_id, key = os.getenv("ADZUNA_APP_ID"), os.getenv("ADZUNA_APP_KEY")
     if not (app_id and key):
         return []
+    # /jobs/gb/ is the UK index, so everything here is UK by construction.
+    radius = cfg["location"].get("radius_miles", 20)
     out = []
     for q in cfg["board_queries"]:
         r = get("https://api.adzuna.com/v1/api/jobs/gb/search/1", params={
             "app_id": app_id, "app_key": key, "results_per_page": 50,
-            "what": q, "where": "London", "distance": 40,
+            "what": q, "where": "London", "distance": radius,
             "max_days_old": 21, "content-type": "application/json"})
         if not r or r.status_code != 200:
             continue
@@ -249,13 +283,16 @@ def board_reed(cfg):
     key = os.getenv("REED_API_KEY")
     if not key:
         return []
+    # Reed is a UK-only board, so location filtering is about London, not country.
+    radius = cfg["location"].get("radius_miles", 20)
     out = []
     for q in cfg["board_queries"]:
         try:
             r = requests.get("https://www.reed.co.uk/api/1.0/search",
                              auth=(key, ""), headers=UA, timeout=TIMEOUT,
                              params={"keywords": q, "locationName": "London",
-                                     "distanceFromLocation": 30, "resultsToTake": 100})
+                                     "distanceFromLocation": radius,
+                                     "resultsToTake": 100})
         except requests.RequestException:
             continue
         if r.status_code != 200:
@@ -284,68 +321,128 @@ def _has(word, text):
     return re.search(rf"\b{re.escape(word)}(?:s|es|ship|ships)?\b", text) is not None
 
 
-VAGUE_LOC = {"hybrid", "remote", "onsite", "on-site", "various", "flexible",
-             "multiple", "unspecified", "worldwide", "global", ""}
+# Location strings that name no actual place. These are not rejected outright,
+# they just mean the description has to prove where the job is.
+VAGUE_LOC = {"hybrid", "remote", "onsite", "on-site", "on site", "in-office",
+             "in office", "office", "various", "various locations", "flexible",
+             "multiple", "multiple locations", "nationwide", "field based",
+             "unspecified", "worldwide", "global", "uk", "gb", ""}
 
 # "5+ years of experience" is an instant no for an internship bot
 YEARS = re.compile(r"(\d+)\s*\+?\s*years?")
 
+# Inner/outer London postcode districts: EC2A, N1, SE1, W12, E14 ...
+# Anchored to a word start so 'SW1' hits but 'MSW1' does not.
+LONDON_POSTCODE = re.compile(r"(?<!\w)(ec|wc|nw|se|sw|[enw])\d{1,2}[a-z]?(?!\w)")
+
+
+def location_verdict(job, cfg):
+    """Decide whether a posting is really in London.
+
+    Returns (tag, None) if it passes, or (None, reason) if it does not.
+
+    Order matters. Foreign evidence is checked before UK evidence, because a
+    global posting will cheerfully list 'London, New York, Singapore' in its
+    boilerplate - reading that as UK proof is exactly how a Bengaluru role
+    ended up in the inbox.
+    """
+    lc = cfg["location"]
+    loc = norm(job["location"])
+    desc = norm(job["desc"])
+    blob = norm(f"{job['title']} {job['desc']} {job['location']}")
+    london_only = lc.get("mode", "london") == "london"
+
+    # The location field is the employer's own statement of where the job is,
+    # so a foreign city there is final. No description can override it.
+    if hit := word_hit(lc["exclude_locations"], loc):
+        return None, f"outside UK ({hit})"
+
+    vague = loc.strip(" ,-") in VAGUE_LOC or len(loc) < 4
+
+    if vague:
+        # 'Hybrid' or 'Remote' tells us nothing, so the description has to
+        # carry the proof - and has to survive the foreign check too.
+        if hit := word_hit(lc["exclude_locations"], desc):
+            return None, f"remote role, description points abroad ({hit})"
+        if word_hit(lc["london_signals"], desc) or LONDON_POSTCODE.search(desc):
+            return "London (remote/hybrid)", None
+        if lc.get("allow_remote_uk") and word_hit(lc["uk_signals"], blob):
+            return ("UK remote", None) if not london_only else (None, "UK remote, no London base")
+        return None, "no London or UK evidence"
+
+    # A specific location. Take it at face value.
+    if word_hit(lc["london_signals"], loc) or LONDON_POSTCODE.search(loc):
+        return "London", None
+
+    if lc.get("include_commuter_belt") and word_hit(lc["commuter_belt"], loc):
+        return "London commuter belt", None
+
+    if word_hit(lc["uk_signals"], loc):
+        return (None, f"UK but not London ({loc[:40]})") if london_only else ("UK", None)
+
+    return None, f"location not recognised as UK ({loc[:40]})"
+
+
+def role_kind(text, sc):
+    """Which bucket a piece of text falls into, best fit first."""
+    for bucket, kind in (("role_cloud", "cloud"), ("role_software", "software"),
+                         ("role_adjacent", "adjacent")):
+        if word_hit(sc[bucket], text):
+            return kind
+    return None
+
 
 def score_job(job, cfg):
+    """Return (points, reasons) or (None, [rejection reason])."""
     sc = cfg["scoring"]
-    title = job["title"].lower()
-    desc = job["desc"].lower()
-    blob = (title + " " + desc + " " + job["location"]).lower()
+    title = norm(job["title"])
+    desc = norm(job["desc"])
+    blob = norm(f"{job['title']} {job['desc']} {job['location']}")
     points, why = 0, []
 
     # -- hard excludes -------------------------------------------------------
-    for bad in sc["exclude_title"]:
-        if re.search(rf"\b{re.escape(bad)}\b", title):
-            return None, []
+    if bad := word_hit(sc["exclude_title"], title):
+        return None, [f"seniority in title ({bad})"]
+
+    if bad := word_hit(sc["exclude_discipline"], title):
+        return None, [f"non-technical discipline ({bad})"]
 
     # must be an early-careers role in the TITLE, not just mentioned in the
     # body text. Descriptions say "we welcome students" on senior roles all the
     # time - matching those would flood the inbox and kill trust in the alerts.
     level_hit = next((k for k in sc["level_keywords"] if _has(k, title)), None)
     if not level_hit:
-        return None, []
+        return None, ["not an early-careers title"]
 
     # experience demand: no internship asks for 3+ years
     for m in YEARS.finditer(blob):
         ctx = blob[max(0, m.start() - 70):m.end() + 70]
         if int(m.group(1)) >= 3 and "experience" in ctx:
-            return None, []
+            return None, [f"wants {m.group(1)}+ years experience"]
 
-    # -- location ------------------------------------------------------------
-    loc = job["location"].lower().strip()
-    foreign = sc["exclude_locations"]
-
-    if any(re.search(rf"\b{re.escape(c)}\b", loc) for c in foreign):
-        return None, []
-
-    # A location field of "Hybrid" or "Remote" tells us nothing, so fall back
-    # to the description. This is how a Bengaluru role reached the inbox.
-    if loc in VAGUE_LOC or len(loc) < 4:
-        if any(re.search(rf"\b{re.escape(c)}\b", desc) for c in foreign):
-            return None, []
-
-    # and require positive UK evidence somewhere rather than trusting silence
-    if not any(re.search(rf"\b{re.escape(u)}\b", blob) for u in sc["uk_signals"]):
-        return None, []
+    # -- location: must be London ---------------------------------------------
+    where, reason = location_verdict(job, cfg)
+    if not where:
+        return None, [reason]
 
     # -- role fit: no technical match at all means it is not for you ---------
-    # (an ASOS "Marketing Placement" must not outrank a Sky software placement)
-    if any(k in blob for k in sc["role_cloud"]):
-        points += 24
-        why.append("cloud/DevOps fit")
-    elif any(k in blob for k in sc["role_software"]):
-        points += 15
-        why.append("software role")
-    elif any(k in blob for k in sc["role_adjacent"]):
-        points += 6
-        why.append("tech-adjacent")
+    # Judged on the TITLE first. An ASOS "Marketing Placement" whose blurb
+    # happens to mention AWS must not score as a cloud role.
+    kind = role_kind(title, sc)
+    if kind:
+        points += {"cloud": 24, "software": 15, "adjacent": 6}[kind]
+        why.append({"cloud": "cloud/DevOps fit", "software": "software role",
+                    "adjacent": "tech-adjacent"}[kind])
     else:
-        return None, []
+        # Generic titles like "Summer Placement Programme" are common and can
+        # still be technical, so fall back to the description - but only for a
+        # real engineering signal, and at reduced weight since it is weaker
+        # evidence.
+        if role_kind(desc, sc) in ("cloud", "software"):
+            points += 8
+            why.append("technical (per description)")
+        else:
+            return None, ["no technical role match"]
 
     # -- employer tier: dominant factor -------------------------------------
     points += {"A": 32, "B": 20, "C": 8}.get(job.get("tier"), 16)
@@ -358,16 +455,10 @@ def score_job(job, cfg):
     points += 18 if any(_has(k, title) for k in strong) else 11
     why.append(level_hit)
 
-    # -- location ------------------------------------------------------------
-    loc = job["location"].lower()
-    if "london" in loc:
-        points += 12
-        why.append("London")
-    elif any(k in loc for k in ("remote", "hybrid", "flexible")):
-        points += 7
-        why.append("remote/hybrid")
-    else:
-        points += 2
+    # -- location quality ----------------------------------------------------
+    points += {"London": 12, "London (remote/hybrid)": 9,
+               "London commuter belt": 6}.get(where, 4)
+    why.append(where)
 
     # -- freshness: rolling deadlines mean speed wins -------------------------
     posted = parse_date(job.get("posted"))
@@ -383,10 +474,11 @@ def score_job(job, cfg):
             why.append("stale")
 
     # -- modifiers: boosts and penalties from the description -----------------
-    # clamped, so three cloud buzzwords cannot outweigh employer tier and fit
+    # clamped, so three cloud buzzwords cannot outweigh employer tier and fit.
+    # Whole-word matched: plain substrings fired 'AWS' on the word 'laws'.
     bonus = 0
     for phrase, delta, label in sc["modifiers"]:
-        if phrase in blob:
+        if word_hit([phrase], blob):
             bonus += delta
             why.append(label)
     points += max(-40, min(bonus, 20))
@@ -447,7 +539,7 @@ def discover(cfg):
     }
     found = missing = 0
     for c in cfg["companies"]:
-        if c.get("ats") or c.get("ats") == "skip":
+        if c.get("ats"):
             continue
         hit = None
         for slug in slugify(c["name"]):
@@ -525,7 +617,11 @@ def render(groups, mode):
         label, colour = band(j["score"])
         posted = parse_date(j.get("posted"))
         age = f"{(NOW - posted).days}d ago" if posted else "date unknown"
-        why = ", ".join(j["why"][:4])
+        # escape everything: clean() turns '&amp;' back into '&', which would
+        # otherwise land in the HTML raw and break the markup
+        why = escape(", ".join(j["why"][:4]))
+        j = {**j, "title": escape(j["title"]), "company": escape(j["company"]),
+             "location": escape(j["location"]), "url": escape(j["url"], quote=True)}
         rows.append(f"""
 <tr><td style="padding:14px 0;border-bottom:1px solid #e6e8eb">
   <div style="font:600 12px system-ui;color:{colour};letter-spacing:.06em">
@@ -578,7 +674,7 @@ def send(subject, html):
 
 def log_csv(jobs):
     exists = LOG_PATH.exists()
-    with open(LOG_PATH, "a", newline="") as f:
+    with open(LOG_PATH, "a", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
         if not exists:
             w.writerow(["found", "score", "band", "title", "company",
@@ -598,7 +694,9 @@ def main():
     ap.add_argument("--discover", action="store_true")
     ap.add_argument("--mode", choices=["new", "digest"], default="new")
     ap.add_argument("--dry-run", action="store_true")
-    ap.add_argument("--min-score", type=int, default=32)
+    ap.add_argument("--explain", action="store_true",
+                    help="show why postings were rejected - use when tuning filters")
+    ap.add_argument("--min-score", type=int, default=34)
     args = ap.parse_args()
 
     cfg = load_json(CONFIG_PATH, None)
@@ -613,15 +711,25 @@ def main():
     print(f"Run: {NOW:%Y-%m-%d %H:%M} UTC  mode={args.mode}")
     jobs = collect(cfg)
 
-    scored = []
+    scored, rejects = [], Counter()
     for j in jobs:
         pts, why = score_job(j, cfg)
-        if pts is None or pts < args.min_score:
+        if pts is None:
+            rejects[why[0]] += 1
+            continue
+        if pts < args.min_score:
+            rejects[f"scored under {args.min_score}"] += 1
             continue
         j["score"], j["why"] = pts, why
         scored.append(j)
     scored.sort(key=lambda x: -x["score"])
     print(f"  {len(scored)} passed filters and scoring")
+
+    if args.explain:
+        print("\n  rejected:")
+        for reason, n in rejects.most_common(20):
+            print(f"    {n:>4}  {reason}")
+        print()
 
     seen = load_json(SEEN_PATH, {})
     new = [j for j in scored if job_key(j) not in seen]

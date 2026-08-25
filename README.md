@@ -1,10 +1,14 @@
 # internbot
 
-Finds UK CS internships and placements, scores each one by how likely **you** are
-to actually land it, and emails you a ranked digest when something new appears.
+Finds **London** CS internships and placements, scores each one by how likely
+**you** are to actually land it, and emails you a ranked digest when something
+new appears.
 
 No scraping. Every source is an official JSON API or a documented applicant
 tracking system feed, so nothing breaks when a careers page gets redesigned.
+
+**New here? Read [USER_GUIDE.md](USER_GUIDE.md).** It covers setup, daily use,
+tuning and troubleshooting in full. This README is the short version.
 
 ---
 
@@ -17,8 +21,8 @@ tracking system feed, so nothing breaks when a careers page gets redesigned.
 | Adzuna | developer.adzuna.com | Free, instant |
 | Reed | reed.co.uk/developers | Free, instant |
 
-Both cover most of the UK market in one call each. This is where the bulk of
-your coverage comes from.
+Both cover most of the London market in one call each. This is where the bulk
+of your coverage comes from — without them a run finds single-digit results.
 
 ### 2. Gmail app password
 
@@ -29,7 +33,7 @@ password.
 ### 3. Discover the employer feeds
 
 ```bash
-pip install requests
+pip install -r requirements.txt
 python fetch.py --discover
 ```
 
@@ -45,11 +49,12 @@ to Civil Service Jobs and most Workday employers.
 
 ```bash
 export ADZUNA_APP_ID=...  ADZUNA_APP_KEY=...  REED_API_KEY=...
-python fetch.py --dry-run
+python fetch.py --dry-run --explain
 ```
 
-Prints the ranked list to your terminal and sends nothing. Check the ordering
-looks sane, then drop `--dry-run`.
+Prints the ranked list to your terminal and sends nothing. `--explain` also
+shows why everything else was rejected, which is the fastest way to confirm the
+filters are behaving. Check the ordering looks sane, then drop `--dry-run`.
 
 ### 5. Put it on GitHub Actions so it runs itself
 
@@ -64,17 +69,20 @@ server, nothing to leave switched on.
 
 ## How the scoring works
 
-Every role is filtered, then scored out of 100.
+Every role is filtered, then scored out of 100. Around 3,000 postings come in
+per run and single digits survive the filters.
 
-**Dropped outright:** senior/lead/manager titles, anything outside the UK, roles
-with no early-careers word in the *title*, and anything with no technical role
-match. That last filter is why an ASOS marketing placement cannot outrank a Sky
-software placement.
+**Dropped outright:** senior/lead/manager titles, non-technical disciplines
+(marketing, sales, HR, finance), anything not based in London, roles with no
+early-careers word in the *title*, and anything with no technical role match.
+Those last two are why an ASOS marketing placement cannot outrank a Sky software
+placement.
 
 **Scored on:** employer tier (32/20/8), role fit against your cloud and DevOps
 angle (24 for cloud/DevOps, 15 for general software, 6 adjacent), how strong the
-level match is, London or remote, and freshness. Then boosts and penalties from
-the description, clamped so three buzzwords cannot outweigh employer tier.
+level match is, how central the London location is, and freshness. Then boosts
+and penalties from the description, clamped so three buzzwords cannot outweigh
+employer tier.
 
 | Band | Meaning |
 |---|---|
@@ -83,7 +91,30 @@ the description, clamped so three buzzwords cannot outweigh employer tier.
 | **WORTH A LOOK** (34-49) | Apply if you have spare capacity. |
 
 Tune anything in `config.json`. If cloud roles stop mattering to you, change the
-weights there rather than the code.
+weights there rather than the code. See
+[USER_GUIDE.md](USER_GUIDE.md#tuning-the-scores) for what each list does.
+
+---
+
+## London only
+
+The `location` block in `config.json` controls this:
+
+```json
+"location": {
+  "mode": "london",              // "uk" widens it to the whole country
+  "radius_miles": 20,            // passed to the Adzuna and Reed searches
+  "include_commuter_belt": true, // Watford, St Albans, Reading, Guildford...
+  "allow_remote_uk": false       // accept UK-wide remote roles
+}
+```
+
+A foreign city in the location field is final and no description can override
+it. A vague location like `Remote` or `Hybrid` proves nothing, so the
+description has to carry the evidence. Foreign evidence is always checked
+before UK evidence, because a global posting will happily list "London, New
+York, Singapore" in its boilerplate. Accents are folded before matching, so
+`Kraków` and `Zürich` are caught too.
 
 ---
 
@@ -146,14 +177,16 @@ The bot only buys you the head start. You still have to use it.
 ## Files
 
 ```
-fetch.py          everything: adapters, scoring, email
-config.json       employers, tiers, keywords, weights - edit this
-seen.json         auto-created state, stops repeat alerts
-job_log.csv       running log of every match, doubles as your tracker
+fetch.py            everything: adapters, filtering, scoring, email
+config.json         employers, location rules, keywords, weights - edit this
+requirements.txt    dependencies
+USER_GUIDE.md       full guide: setup, tuning, troubleshooting
+seen.json           auto-created state, stops repeat alerts
+job_log.csv         running log of every match, doubles as your tracker
+.github/workflows/  the scheduled GitHub Actions run
 ```
 
 ## Ground rules
 
 Official APIs only, polite rate limiting, retry with backoff, and no
 auto-applying. A human reads every posting before anything gets submitted.
-# Jobs-Search-Assistant
